@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "ast.h"
-#include "codegen.h"
+#include "codegen.hpp"
 
 extern FILE *yyin;
 
@@ -19,123 +19,194 @@ struct ASTNode *root;
     struct ASTNode *node;
 }
 
-%token VOID
 %token RETURN IF ELSE WHILE CONTINUE BREAK
-%token SEMICOLON COMMA LPAREN RPAREN LBRACE RBRACE ASSIGN
+%token SEMICOLON COMMA LPAREN RPAREN LBRACE RBRACE 
 
-%left UMINUS // unary minus
-%left NOT // not
-%left BIT_NOT // bitwise not
-%left MUL DIV MOD // * / %
-%left PLUS MINUS // + -
-%left LT LE GT GE // < <= > >=
-%left EQ NE // == !=
-%left BIT_AND // &
-%left BIT_XOR // ^
-%left BIT_OR // |
-%left AND // &&
+%right ASSIGN
+
 %left OR // ||
-%left ASSIGN // =
+%left AND // &&
+%left BIT_OR // |
+%left BIT_XOR // ^
+%left BIT_AND // &
+%left EQ NE // == !=
+%left LT LE GT GE // < <= > >=
+%left PLUS MINUS // + -
+%left MUL DIV MOD // * / %
 
-%token <number> NUMBER INT 
-%token <double_v> FLOAT
-%token <identifier> IDENTIFIER
+%right UMINUS BIT_NOT NOT 
 
-%type <node> param translation_unit function function_list statements statement expression declaration if_statement while_statement BREAK CONTINUE
+%token <number> NUMBER
+%token <identifier> IDENTIFIER VOID INT FLOAT
+
+%type <node> translation_unit function_defination function_list statements type function_call
+%type <node> statement expression declaration if_statement else_statement while_statement BREAK CONTINUE
+%type <node> argument argument_list arguments if_else_statement assign param param_list params
+
 
 
 %start translation_unit
 
 %%
 
+// 整个翻译单元定义
 translation_unit:
     /* empty */ { root = NULL; printf("empty program\n"); }
     | function_list {
-        root = createUnaryNode(NODE_PROGRAM, $1); 
+        root = createUnaryNode(NODE_TRANSLATION_UNIT, $1); 
     }
     ;
 
+// 函数定义
 function_list:
-    function_defination { $$ = createUnaryNode(NODE_FUNCTION_LIST, $1); }
-    | function_list function_defination { $$ = createBinaryNode(NODE_FUNCTION_LIST, $1); }
+    function_defination { $$ = createBinaryNode(NODE_FUNCTION_LIST, $1, NULL); }
+    | function_list function_defination  { $$ = createBinaryNode(NODE_FUNCTION_LIST, $2, $1); }
     ;
 
 function_defination:
     type IDENTIFIER LPAREN params RPAREN LBRACE statements RBRACE {
-        $$ = createBinaryNode(NODE_FUNCTION, createIdentifierNode($2), $7);
+        $$ = createFourNode(NODE_FUNCTION_DEFINITION, $1, createIdentifierNode($2), $4, $7);
     }
     ;
 
-type:
-    INT | FLOAT | VOID
+// 函数调用
+function_call:
+    IDENTIFIER LPAREN arguments RPAREN {
+        $$ = createBinaryNode(NODE_FUNCTION_CALL, createIdentifierNode($1), $3);
+    }
     ;
 
+
+// 类型标识定义
+type:
+    INT { $$ = createUnaryNode(NODE_TYPE_SPECIFIER, createIdentifierNode($1));}
+    | VOID { $$ = createUnaryNode(NODE_TYPE_SPECIFIER, createIdentifierNode($1));}
+    | FLOAT { $$ = createUnaryNode(NODE_TYPE_SPECIFIER, createIdentifierNode($1));}
+    ;
+
+// 形参定义
 params:
-    /* empty */ | param_list
+    /* empty */ { $$ = NULL; }
+    | param_list { $$ = $1; }
     ;
 
 param_list:
-    param | param_list COMMA param
+    param { $$ = createBinaryNode(NODE_PARAMETER_LIST, $1, NULL); }
+    | param_list COMMA param { $$ = createBinaryNode(NODE_PARAMETER_LIST, $3, $1); }
     ;
 
-param: // 函数参数
+param: 
     type IDENTIFIER { // 带类型的函数参数说明这里是在定义阶段
-        $$ = createParamNode($2);
-    }
-    | expression {/* 任何表达式都可以成为函数传参对象 */
-        $$ = createUnaryNode(NODE_PARAM, $1); 
+        $$ = createBinaryNode(NODE_PARAMETER, $1, createIdentifierNode($2));
     }
     ;
 
+// 实参形式定义
+arguments:
+    /* empty */ { $$ = NULL; }
+    | argument_list { $$ = $1 ;}
+    ;
+
+argument_list:
+    argument { $$ = createBinaryNode(NODE_ARGUMENT_LIST, $1, NULL); }
+    | argument_list COMMA argument { $$ = createBinaryNode(NODE_ARGUMENT_LIST, $3, $1); }
+    ;
+
+argument: 
+    expression { $$ = createUnaryNode(NODE_EXPRESSION, $1); }
+    ;
+
+// 语句定义
 statements:
     /* empty */ { $$ = NULL; printf("empty statements in this function\n"); }
     | statement {
-        $$ = createUnaryNode(NODE_STATEMENT, $1); 
+        $$ = createBinaryNode(NODE_COMPOUND_STATEMENT, $1, NULL);
     }
     |statements statement {
-        $$ = createBinaryNode(NODE_STATEMENT, $1, $2);
+        $$ = createBinaryNode(NODE_COMPOUND_STATEMENT, $1, $2);
     }
     ;
 
 statement:
     RETURN expression SEMICOLON {
-        $$ = createUnaryNode(NODE_STATEMENT, $2);
+        $$ = createUnaryNode(NODE_RETURN_STATEMENT, $2);
     }
-    | declaration
-    | if_statement
-    | while_statement
-    | CONTINUE SEMICOLON { $$ = createUnaryNode(NODE_STATEMENT, $1);}
-    | BREAK SEMICOLON { $$ = createUnaryNode(NODE_STATEMENT, $1);}
+    | CONTINUE SEMICOLON {
+        $$ = createUnaryNode(NODE_CONTINUE_STATEMENT, $1);
+    }
+    | BREAK SEMICOLON {
+        $$ = createUnaryNode(NODE_BREAK_STATEMENT, $1);
+    }
+    | assign {
+        $$ = $1;
+    }
+    | declaration {
+        $$ = $1;
+    }
+    | function_call SEMICOLON {
+        $$ = $1;
+    }
+    | if_statement {
+        $$ = $1;
+    }
+    | if_else_statement {
+        $$ = $1;
+    }
+    | while_statement {
+        $$ = $1;
+    }
     ;
 
+// if_else语句定义
 if_statement:
-    IF LPAREN expression RPAREN statement {
-        $$ = createBinaryNode(NODE_STATEMENT, $3, $5);
+    IF LPAREN expression RPAREN LBRACE statement RBRACE {
+        $$ = createBinaryNode(NODE_IF_STATEMENT, $3, $6);
     }
-    | IF LPAREN expression RPAREN statement ELSE statement {
-        $$ = createBinaryNode(NODE_STATEMENT, $3, createBinaryNode(NODE_STATEMENT, $5, $7));
+    ;
+else_statement:
+    ELSE LBRACE statement RBRACE {
+        $$ = createUnaryNode(NODE_ELSE_STATEMENT, $3);
     }
     ;
 
+if_else_statement:
+    if_statement else_statement {
+        $$ = createBinaryNode(NODE_IF_ELSE_STATEMENT, $1, $2);
+    }
+    ;
+
+// while语句定义
 while_statement:
-    WHILE LPAREN expression RPAREN statement {
-        $$ = createBinaryNode(NODE_STATEMENT, $3, $5);
+    WHILE LPAREN expression RPAREN LBRACE statement RBRACE {
+        $$ = createBinaryNode(NODE_WHILE_STATEMENT, $3, $6);
     }
     ;
 
+// 变量赋值
+assign:
+    IDENTIFIER ASSIGN expression SEMICOLON {
+        $$ = createBinaryNode(NODE_ASSIGNMENT_STATEMENT, createIdentifierNode($1), $3);
+    }
+    ;
+
+// 变量定义
 declaration:
     type IDENTIFIER ASSIGN expression SEMICOLON {
-        $$ = createBinaryNode(NODE_STATEMENT, createIdentifierNode($2), $4);
+        $$ = createBinaryNode(NODE_INITIALIZER, createIdentifierNode($2), $4);
     }
     | type IDENTIFIER SEMICOLON { $$ = createIdentifierNode($2); }
+    ;
 
-
+// 表达式定义
 expression:
     NUMBER {
         $$ = createNumberNode($1);
     }
     | '-' expression %prec UMINUS { 
-        $$ = createUnaryNode(NODE_UNARY_MINUS, $2);
+        $$ = createUnaryNode(NODE_UNARY_EXPRESSION, $2);
+    }
+    | function_call {
+        $$ = createIdentifierNode($1);
     }
     | IDENTIFIER {
         $$ = createIdentifierNode($1);
