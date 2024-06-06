@@ -2,40 +2,72 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "ast.h"
+#include "codegen.h"
+
+extern FILE *yyin;
 
 void yyerror(const char *s);
 extern int yylex(void);
 
-ASTNode *root;
+struct ASTNode *root;
 %}
 
 %union {
     int number;
+    float double_v;
     char *identifier;
-    ASTNode *node;
+    struct ASTNode *node;
 }
 
-%token INT FLOAT RETURN IF ELSE WHILE CONTINUE BREAK
-%token NUMBER IDENTIFIER
+%token VOID
+%token RETURN IF ELSE WHILE CONTINUE BREAK
 %token SEMICOLON COMMA LPAREN RPAREN LBRACE RBRACE ASSIGN
-%token PLUS MINUS MUL DIV MOD LT LE GT GE EQ NE AND OR BIT_AND BIT_OR BIT_XOR NOT BIT_NOT
 
-%type <node> program function statements statement expression declaration if_statement while_statement
+%left UMINUS // unary minus
+%left NOT // not
+%left BIT_NOT // bitwise not
+%left MUL DIV MOD // * / %
+%left PLUS MINUS // + -
+%left LT LE GT GE // < <= > >=
+%left EQ NE // == !=
+%left BIT_AND // &
+%left BIT_XOR // ^
+%left BIT_OR // |
+%left AND // &&
+%left OR // ||
+%left ASSIGN // =
+
+%token <number> NUMBER INT 
+%token <double_v> FLOAT
+%token <identifier> IDENTIFIER
+
+%type <node> param translation_unit function function_list statements statement expression declaration if_statement while_statement BREAK CONTINUE
+
+
+%start translation_unit
 
 %%
 
-program:
-    function { root = $1; }
+translation_unit:
+    /* empty */ { root = NULL; printf("empty program\n"); }
+    | function_list {
+        root = createUnaryNode(NODE_PROGRAM, $1); 
+    }
     ;
 
-function:
+function_list:
+    function_defination { $$ = createUnaryNode(NODE_FUNCTION_LIST, $1); }
+    | function_list function_defination { $$ = createBinaryNode(NODE_FUNCTION_LIST, $1); }
+    ;
+
+function_defination:
     type IDENTIFIER LPAREN params RPAREN LBRACE statements RBRACE {
         $$ = createBinaryNode(NODE_FUNCTION, createIdentifierNode($2), $7);
     }
     ;
 
 type:
-    INT | FLOAT
+    INT | FLOAT | VOID
     ;
 
 params:
@@ -46,12 +78,23 @@ param_list:
     param | param_list COMMA param
     ;
 
-param:
-    type IDENTIFIER
+param: // 函数参数
+    type IDENTIFIER { // 带类型的函数参数说明这里是在定义阶段
+        $$ = createParamNode($2);
+    }
+    | expression {/* 任何表达式都可以成为函数传参对象 */
+        $$ = createUnaryNode(NODE_PARAM, $1); 
+    }
     ;
 
 statements:
-    /* empty */ | statements statement
+    /* empty */ { $$ = NULL; printf("empty statements in this function\n"); }
+    | statement {
+        $$ = createUnaryNode(NODE_STATEMENT, $1); 
+    }
+    |statements statement {
+        $$ = createBinaryNode(NODE_STATEMENT, $1, $2);
+    }
     ;
 
 statement:
@@ -61,8 +104,8 @@ statement:
     | declaration
     | if_statement
     | while_statement
-    | CONTINUE SEMICOLON
-    | BREAK SEMICOLON
+    | CONTINUE SEMICOLON { $$ = createUnaryNode(NODE_STATEMENT, $1);}
+    | BREAK SEMICOLON { $$ = createUnaryNode(NODE_STATEMENT, $1);}
     ;
 
 if_statement:
@@ -84,12 +127,15 @@ declaration:
     type IDENTIFIER ASSIGN expression SEMICOLON {
         $$ = createBinaryNode(NODE_STATEMENT, createIdentifierNode($2), $4);
     }
-    | type IDENTIFIER SEMICOLON
-    ;
+    | type IDENTIFIER SEMICOLON { $$ = createIdentifierNode($2); }
+
 
 expression:
     NUMBER {
         $$ = createNumberNode($1);
+    }
+    | '-' expression %prec UMINUS { 
+        $$ = createUnaryNode(NODE_UNARY_MINUS, $2);
     }
     | IDENTIFIER {
         $$ = createIdentifierNode($1);
@@ -162,13 +208,28 @@ void yyerror(const char *s) {
     fprintf(stderr, "Error: %s\n", s);
 }
 
-int main(void) {
+int main(int argc, char **argv) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <input-file>\n", argv[0]);
+        return 1;
+    }
+
+    // 打开输入文件
+    yyin = fopen(argv[1], "r");
+    if (!yyin) {
+        perror("Error opening input file");
+        return 1;
+    }
+
+    // 调用解析器
     if (yyparse() == 0) {
         // 解析成功，生成汇编代码
         generateAssembly(root);
         freeAST(root);
+        fclose(yyin);
         return 0;
     } else {
+        fclose(yyin);
         return 1;
     }
 }
