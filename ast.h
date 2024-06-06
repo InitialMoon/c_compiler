@@ -1,6 +1,10 @@
 #ifndef AST_H
 #define AST_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef enum {
     NODE_TRANSLATION_UNIT, // 翻译单元节点: 由自身作为右子式和一个函数定义列表节点作为左子式构成
     NODE_FUNCTION_DEFINITION, // 函数定义节点,由函数名的标识符节点作为左子式，函数体和函数列表作为右子式构成,函数列表作为左子式，复合语句节点为右子式递归构成
@@ -56,5 +60,9 @@ ASTNode *createNumberNode(int number);
 ASTNode *createIdentifierNode(const char *identifier);
 
 void freeAST(ASTNode *root);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // AST_H

@@ -20,8 +20,8 @@ endif()
 include_directories(${CMAKE_SOURCE_DIR}) 
 include_directories(${CMAKE_BINARY_DIR})
 
-FLEX_TARGET(MyLexer lexer.l ${CMAKE_CURRENT_BINARY_DIR}/lexer.c)
-BISON_TARGET(MyParser grammar.y ${CMAKE_CURRENT_BINARY_DIR}/parser.c)
+FLEX_TARGET(MyLexer lexer.l ${CMAKE_CURRENT_BINARY_DIR}/lexer.cpp)
+BISON_TARGET(MyParser grammar.y ${CMAKE_CURRENT_BINARY_DIR}/parser.cpp)
 ADD_FLEX_BISON_DEPENDENCY(MyLexer MyParser) 
 
 # add_compile_options(-fsanitize=address) 
@@ -30,10 +30,9 @@ add_compile_options(-pedantic)
 
 add_executable(
     Compilerlab3 
+    ast.c
+    codegen.cpp
     ${FLEX_MyLexer_OUTPUTS}
     ${BISON_MyParser_OUTPUTS}
-    ast.c
-    codegen.c
-    # compilerlab.cpp
 )
 target_compile_features(Compilerlab3 PRIVATE cxx_std_14)

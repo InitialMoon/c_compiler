@@ -24,7 +24,7 @@ int global_address = 4;
 std::map<std::string, int> Variable_Address;// 记录所有的变量名，以及其对应的地址
 std::list<word> splited_src; // 存储着所有被分割的词
 set<string> KEYWORDS = {"int", "return", "main"};
-set<string> OPERATORS = {"+", "-", "*", "=", "/", "(", ")", "%", "<", "<=", ">", ">=", "==", "!=", "&", "|", "^"};
+set<string> OPERATORS = {"+", "-", "*", "=", "/", "(", ")", "%", "<", "<=", ">", ">=", "==", "!=", "&", "|", "^", "||", "&&", "!", "~"};
 set<string> FUNCTION = {"println_int"};
 string src_path;
 string src;
@@ -34,6 +34,12 @@ list<string> compiler_src; // 汇编结果
 int transvalue(string c) {
 	if (c == "(") {
 		return 1;
+	}
+	else if (c == "||") {
+		return 2;
+	}
+	else if (c == "&&") {
+		return 3;
 	}
 	else if (c == "|") {
 		return 4;
@@ -71,8 +77,10 @@ int transvalue(string c) {
 	else if (c == "/") {
 		return 12;
 	}
-	else if (c == ")") {
+	else if (c == "!" || c == "~" || c == "@") { // 用@代替负号，如果有负号含义的就当做一个数字和后面紧跟的字符进行处理
 		return 13;
+	} else if (c == ")") {
+		return 14;
 	}
 	else {
 		return 0;

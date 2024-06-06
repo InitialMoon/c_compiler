@@ -43,8 +43,6 @@ struct ASTNode *root;
 %type <node> statement expression declaration if_statement else_statement while_statement BREAK CONTINUE
 %type <node> argument argument_list arguments if_else_statement assign param param_list params
 
-
-
 %start translation_unit
 
 %%
@@ -206,7 +204,7 @@ expression:
         $$ = createUnaryNode(NODE_UNARY_EXPRESSION, $2);
     }
     | function_call {
-        $$ = createIdentifierNode($1);
+        $$ = createUnaryNode(NODE_EXPRESSION, $1);
     }
     | IDENTIFIER {
         $$ = createIdentifierNode($1);
