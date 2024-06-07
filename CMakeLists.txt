@@ -28,10 +28,8 @@ add_compile_options(-g -DYYDEBUG=1) # Add -DYYDEBUG=1 to enable Bison debug mode
 add_compile_options(-pedantic)
 
 # Flex and Bison targets
-FLEX_TARGET(MyLexer lexer.l ${CMAKE_CURRENT_BINARY_DIR}/lexer.cpp)
-BISON_TARGET(MyParser grammar.y ${CMAKE_CURRENT_BINARY_DIR}/parser.cpp COMPILE_FLAGS "-t -v")
-# FLEX_TARGET(MyLexer lexer.l ${CMAKE_CURRENT_BINARY_DIR}/lexer.cpp)
-# BISON_TARGET(MyParser grammar.y ${CMAKE_CURRENT_BINARY_DIR}/parser.cpp)
+FLEX_TARGET(MyLexer lexer.l ${CMAKE_CURRENT_BINARY_DIR}/lexer.c)
+BISON_TARGET(MyParser grammar.y ${CMAKE_CURRENT_BINARY_DIR}/parser.c COMPILE_FLAGS "-t -v")
 ADD_FLEX_BISON_DEPENDENCY(MyLexer MyParser) 
 
 # add_compile_options(-fsanitize=address) 
@@ -40,8 +38,6 @@ add_compile_options(-pedantic)
 
 add_executable(
     Compilerlab3 
-    ast.c
-    codegen.cpp
     ${FLEX_MyLexer_OUTPUTS}
     ${BISON_MyParser_OUTPUTS}
 )

@@ -1,21 +1,29 @@
 %{
 #include <stdio.h>
 #include <stdlib.h>
-#include "ast.h"
-#include "codegen.hpp"
 
 extern FILE *yyin;
 
 void yyerror(const char *s);
 extern int yylex(void);
 
-struct ASTNode *root;
-// int yydebug=1;
+#define YYSTYPE char *
+
+int ii = 0, itop = -1, istack[100];
+int ww = 0, wtop = -1, wstack[100];
+
+#define _BEG_IF     {istack[++itop] = ++ii;}
+#define _END_IF     {itop--;}
+#define _i          (istack[itop])
+
+#define _BEG_WHILE  {wstack[++wtop] = ++ww;}
+#define _END_WHILE  {wtop--;}
+#define _w          (wstack[wtop])
+
 %}
 
 %union {
     int number;
-    float double_v;
     char *identifier;
     struct ASTNode *node;
 }
