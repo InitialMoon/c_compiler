@@ -14,7 +14,7 @@ typedef enum {
     NODE_PARAMETER, // 形参节点, 终结符，由一个类型指定节点和标识符节点构成
     NODE_ARGUMENT_LIST, // 实参列表, 由自身作为右子式，实参节点作为左子式递归构成
     NODE_ARGUMENT, // 实参节点, 终结符, 由能返回值的一个表达式构成
-    NODE_VARIABLE_DECLARATION, // 变量声明的节点,a=1/c/这种单独的一个单元，用,分割的算一个声明段元, 由自身作为右子式，变量定义列表作为左子式递归构成
+    // NODE_VARIABLE_DECLARATION, // 变量声明的节点,a=1/c/这种单独的一个单元，用,分割的算一个声明段元, 由自身作为右子式，变量定义列表作为左子式递归构成
     NODE_INITIALIZER, // 初始化变量节点,这一个初始化节点可能由多个变量声明节点构成
     NODE_TYPE_SPECIFIER, // 类型指定节点
     NODE_COMPOUND_STATEMENT, // 复合语句节点 {}语句,由多个或0个表达式语句节点构成

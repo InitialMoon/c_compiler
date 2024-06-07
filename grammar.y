@@ -10,6 +10,7 @@ void yyerror(const char *s);
 extern int yylex(void);
 
 struct ASTNode *root;
+// int yydebug=1;
 %}
 
 %union {
@@ -38,6 +39,16 @@ struct ASTNode *root;
 
 %token <number> NUMBER
 %token <identifier> IDENTIFIER VOID INT FLOAT
+%token <identifier> OR // ||
+%token <identifier> AND // &&
+%token <identifier> BIT_OR // |
+%token <identifier> BIT_XOR // ^
+%token <identifier> BIT_AND // &
+%token <identifier> EQ NE // == !=
+%token <identifier> LT LE GT GE // < <= > >=
+%token <identifier> PLUS MINUS // + -
+%token <identifier> MUL DIV MOD // * / %
+%token <identifier> UMINUS BIT_NOT NOT 
 
 %type <node> translation_unit function_defination function_list statements type function_call
 %type <node> statement expression declaration if_statement else_statement while_statement BREAK CONTINUE
@@ -52,6 +63,7 @@ translation_unit:
     /* empty */ { root = NULL; printf("empty program\n"); }
     | function_list {
         root = createUnaryNode(NODE_TRANSLATION_UNIT, $1); 
+        printf("translation_unit\n");
     }
     ;
 
@@ -116,12 +128,9 @@ argument:
 
 // 语句定义
 statements:
-    /* empty */ { $$ = NULL; printf("empty statements in this function\n"); }
-    | statement {
-        $$ = createBinaryNode(NODE_COMPOUND_STATEMENT, $1, NULL);
-    }
+    /* empty */ { $$ = NULL; }
     |statements statement {
-        $$ = createBinaryNode(NODE_COMPOUND_STATEMENT, $1, $2);
+        $$ = createBinaryNode(NODE_COMPOUND_STATEMENT, $2, $1);
     }
     ;
 
@@ -135,10 +144,10 @@ statement:
     | BREAK SEMICOLON {
         $$ = createUnaryNode(NODE_BREAK_STATEMENT, $1);
     }
-    | assign {
+    | assign  SEMICOLON {
         $$ = $1;
     }
-    | declaration {
+    | declaration SEMICOLON {
         $$ = $1;
     }
     | function_call SEMICOLON {
@@ -182,90 +191,99 @@ while_statement:
 
 // 变量赋值
 assign:
-    IDENTIFIER ASSIGN expression SEMICOLON {
+    IDENTIFIER ASSIGN expression {
         $$ = createBinaryNode(NODE_ASSIGNMENT_STATEMENT, createIdentifierNode($1), $3);
     }
     ;
 
 // 变量定义
 declaration:
-    type IDENTIFIER ASSIGN expression SEMICOLON {
-        $$ = createBinaryNode(NODE_INITIALIZER, createIdentifierNode($2), $4);
+    type assign {
+        $$ = createBinaryNode(NODE_INITIALIZER, $1, $2);
     }
-    | type IDENTIFIER SEMICOLON { $$ = createIdentifierNode($2); }
+    | type IDENTIFIER {
+        $$ = createBinaryNode(NODE_INITIALIZER, $1, createIdentifierNode($2));
+    }
+    | declaration COMMA IDENTIFIER { //解析形式,a
+        $$ = createBinaryNode(NODE_INITIALIZER, createIdentifierNode($3), $1);
+    }
+    | declaration COMMA assign { //解析, a = expression
+        $$ = createBinaryNode(NODE_INITIALIZER, $3, $1);
+    }
     ;
 
 // 表达式定义
 expression:
+    // 3种终结符
     NUMBER {
-        $$ = createNumberNode($1);
-    }
-    | '-' expression %prec UMINUS { 
-        $$ = createUnaryNode(NODE_UNARY_EXPRESSION, $2);
+        $$ = createBinaryNode(NODE_EXPRESSION, createNumberNode($1), NULL);
     }
     | function_call {
-        $$ = createUnaryNode(NODE_EXPRESSION, $1);
+        $$ = createBinaryNode(NODE_EXPRESSION, $1, NULL);
     }
     | IDENTIFIER {
-        $$ = createIdentifierNode($1);
+        $$ = createBinaryNode(NODE_EXPRESSION, createIdentifierNode($1), NULL);
     }
-    | expression PLUS expression {
-        $$ = createBinaryNode(NODE_EXPRESSION, $1, $3);
-    }
-    | expression MINUS expression {
-        $$ = createBinaryNode(NODE_EXPRESSION, $1, $3);
-    }
-    | expression MUL expression {
-        $$ = createBinaryNode(NODE_EXPRESSION, $1, $3);
-    }
-    | expression DIV expression {
-        $$ = createBinaryNode(NODE_EXPRESSION, $1, $3);
-    }
-    | expression MOD expression {
-        $$ = createBinaryNode(NODE_EXPRESSION, $1, $3);
-    }
-    | expression LT expression {
-        $$ = createBinaryNode(NODE_EXPRESSION, $1, $3);
-    }
-    | expression LE expression {
-        $$ = createBinaryNode(NODE_EXPRESSION, $1, $3);
-    }
-    | expression GT expression {
-        $$ = createBinaryNode(NODE_EXPRESSION, $1, $3);
-    }
-    | expression GE expression {
-        $$ = createBinaryNode(NODE_EXPRESSION, $1, $3);
-    }
-    | expression EQ expression {
-        $$ = createBinaryNode(NODE_EXPRESSION, $1, $3);
-    }
-    | expression NE expression {
-        $$ = createBinaryNode(NODE_EXPRESSION, $1, $3);
-    }
-    | expression AND expression {
-        $$ = createBinaryNode(NODE_EXPRESSION, $1, $3);
-    }
-    | expression OR expression {
-        $$ = createBinaryNode(NODE_EXPRESSION, $1, $3);
-    }
-    | expression BIT_AND expression {
-        $$ = createBinaryNode(NODE_EXPRESSION, $1, $3);
-    }
-    | expression BIT_OR expression {
-        $$ = createBinaryNode(NODE_EXPRESSION, $1, $3);
-    }
-    | expression BIT_XOR expression {
-        $$ = createBinaryNode(NODE_EXPRESSION, $1, $3);
-    }
-    | MINUS expression %prec NOT {
-        $$ = createUnaryNode(NODE_EXPRESSION, $2);
+    // 3种单目运算符
+    | UMINUS expression { 
+        $$ = createBinaryNode(NODE_EXPRESSION, createUnaryNode(NODE_UNARY_EXPRESSION, createIdentifierNode($1)), $2);
     }
     | NOT expression {
-        $$ = createUnaryNode(NODE_EXPRESSION, $2);
+        $$ = createBinaryNode(NODE_EXPRESSION, createUnaryNode(NODE_UNARY_EXPRESSION, createIdentifierNode($1)), $2);
     }
     | BIT_NOT expression {
-        $$ = createUnaryNode(NODE_EXPRESSION, $2);
+        $$ = createBinaryNode(NODE_EXPRESSION, createUnaryNode(NODE_UNARY_EXPRESSION, createIdentifierNode($1)), $2);
     }
+    // 双目运算符
+    | expression PLUS expression {
+        $$ = createBinaryNode(NODE_EXPRESSION, createIdentifierNode($2), createBinaryNode(NODE_EXPRESSION, $1, $3));
+    }
+    | expression MINUS expression {
+        $$ = createBinaryNode(NODE_EXPRESSION, createIdentifierNode($2), createBinaryNode(NODE_EXPRESSION, $1, $3));
+    }
+    | expression MUL expression {
+        $$ = createBinaryNode(NODE_EXPRESSION, createIdentifierNode($2), createBinaryNode(NODE_EXPRESSION, $1, $3));
+    }
+    | expression DIV expression {
+        $$ = createBinaryNode(NODE_EXPRESSION, createIdentifierNode($2), createBinaryNode(NODE_EXPRESSION, $1, $3));
+    }
+    | expression MOD expression {
+        $$ = createBinaryNode(NODE_EXPRESSION, createIdentifierNode($2), createBinaryNode(NODE_EXPRESSION, $1, $3));
+    }
+    | expression LT expression {
+        $$ = createBinaryNode(NODE_EXPRESSION, createIdentifierNode($2), createBinaryNode(NODE_EXPRESSION, $1, $3));
+    }
+    | expression LE expression {
+        $$ = createBinaryNode(NODE_EXPRESSION, createIdentifierNode($2), createBinaryNode(NODE_EXPRESSION, $1, $3));
+    }
+    | expression GT expression {
+        $$ = createBinaryNode(NODE_EXPRESSION, createIdentifierNode($2), createBinaryNode(NODE_EXPRESSION, $1, $3));
+    }
+    | expression GE expression {
+        $$ = createBinaryNode(NODE_EXPRESSION, createIdentifierNode($2), createBinaryNode(NODE_EXPRESSION, $1, $3));
+    }
+    | expression EQ expression {
+        $$ = createBinaryNode(NODE_EXPRESSION, createIdentifierNode($2), createBinaryNode(NODE_EXPRESSION, $1, $3));
+    }
+    | expression NE expression {
+        $$ = createBinaryNode(NODE_EXPRESSION, createIdentifierNode($2), createBinaryNode(NODE_EXPRESSION, $1, $3));
+    }
+    | expression AND expression {
+        $$ = createBinaryNode(NODE_EXPRESSION, createIdentifierNode($2), createBinaryNode(NODE_EXPRESSION, $1, $3));
+    }
+    | expression OR expression {
+        $$ = createBinaryNode(NODE_EXPRESSION, createIdentifierNode($2), createBinaryNode(NODE_EXPRESSION, $1, $3));
+    }
+    | expression BIT_AND expression {
+        $$ = createBinaryNode(NODE_EXPRESSION, createIdentifierNode($2), createBinaryNode(NODE_EXPRESSION, $1, $3));
+    }
+    | expression BIT_OR expression {
+        $$ = createBinaryNode(NODE_EXPRESSION, createIdentifierNode($2), createBinaryNode(NODE_EXPRESSION, $1, $3));
+    }
+    | expression BIT_XOR expression {
+        $$ = createBinaryNode(NODE_EXPRESSION, createIdentifierNode($2), createBinaryNode(NODE_EXPRESSION, $1, $3));
+    }
+    // 括号
     | LPAREN expression RPAREN {
         $$ = $2;
     }

@@ -19,6 +19,7 @@ struct function_info {
 
 map<string, int> Variable_Address;// 记录所有的变量名，以及其对应的地址
 vector<function_info> function_list;
+set<string> function_name;
 map<string, list<string>> function_assemble;// 记录所有的变量名，以及其对应的地址
 list<string> compiler_src; // 汇编结果
 
@@ -112,6 +113,7 @@ void analysis_function_list (ASTNode *node) {
             break;
         case NODE_FUNCTION_DEFINITION:
             printf("NODE_FUNCTION_DEFINITION\n"); 
+            function_name.insert(node->data.four.n1->data.identifier);
             analysis_function_definition(node);
             break;
         default:
@@ -142,14 +144,6 @@ void print_global_function() {
         printf(".global %s\n", (it->name).c_str());
     }
 }
-
-// 以备lab5
-// void print_global_variable() { 
-// 	printf(".global main\n");
-//     for(auto it = Variable_Address.begin(); it != Variable_Address.end(); it++){
-//         printf(".global %s\n", it->first.c_str());
-//     }
-// }
 
 void generateAssembly(ASTNode *root) {
     translateAST(root);

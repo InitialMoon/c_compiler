@@ -41,7 +41,8 @@ ASTNode *createNumberNode(int number) {
 ASTNode *createIdentifierNode(const char *identifier) {
     ASTNode *node = malloc(sizeof(ASTNode));
     node->type = NODE_IDENTIFIER;
-    node->data.identifier = strdup(identifier);
+    node->data.identifier = (char *)malloc(strlen(identifier) + 1);
+    strcpy(node->data.identifier, identifier);
     node->next = NULL;
     return node;
 }
