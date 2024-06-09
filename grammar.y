@@ -102,7 +102,7 @@ struct function_struct* called_func;
 %left PLUS MINUS // + -
 %left MUL DIV MOD // * / %
 
-%right UMINUS BIT_NOT NOT 
+%right BIT_NOT NOT 
 
 %start translation_unit
 
@@ -281,22 +281,17 @@ expression:
         printf("mov eax, %d\npush eax\n", $1);
     }
     | function_call {
-        // printf("push eax\n");
     }
     | IDENTIFIER {
         // 在函数名和变量名不重复的前提下，可以做到这一点，利用当前名称是否出现在函数名中判断是否是函数
         printf("mov eax, DWORD PTR[ebp%+d]\npush eax\n", var_address($1, analysised_func));
     }
     // 3种单目运算符
-    | MINUS expression %prec NOT {
-        // printf("neg eax\npush eax\n");
-        printf("pop eax\nneg eax\npush eax\n");
-    }
     | NOT expression {
         printf("pop eax\ntest eax, eax\nsetz al\nmovzx eax, al\npush eax\n");
     }
     | BIT_NOT expression {
-        printf("pop eax\nnot eax\ncmp eax, 0\nsete al\nand eax, 1\npush eax\n");
+        printf("pop eax\nnot eax\npush eax\n");
     }
     // 双目运算符
     | expression PLUS expression {
@@ -363,6 +358,10 @@ expression:
         printf("pop ebx\npop eax\n");
         printf("xor eax, ebx\npush eax\n");
     }
+    |
+    MINUS expression %prec NOT { 
+        printf("pop eax\nneg eax\npush eax\n");
+    } // unary minus
     // 括号
     | LPAREN expression RPAREN {
     }
