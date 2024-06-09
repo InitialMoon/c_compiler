@@ -75,6 +75,7 @@ void param_address(char* s, struct function_struct* func) { // 如果存在变�
 }
 
 struct function_struct* analysised_func;
+struct function_struct* called_func;
 
 %}
 
@@ -161,7 +162,15 @@ function_name:
 function_call:
     IDENTIFIER LPAREN arguments RPAREN {
         printf("call %s\n", $1);
-        // printf("add esp, 4\n");
+        for (int i = 0; i < function_num; i++) {
+            if (strcmp(funcs[i].func_name, $1) == 0) {
+                called_func = &funcs[i];
+                for (int i = 0; i < called_func->param_num; i++) {
+                    printf("add esp, 4\n");
+                }
+            }
+        }
+        printf("push eax\n");
     }
     ;
 
@@ -187,11 +196,14 @@ params:
 // 实参形式定义
 arguments:
     /* empty */
-    | expression {
-        printf("push eax\n");
+    | argument_list {
     }
-    | arguments COMMA expression {
-        printf("push eax\n");
+    ;
+
+argument_list:
+    expression {
+    }
+    | argument_list COMMA expression {
     }
     ;
 
@@ -266,22 +278,25 @@ declaration:
 expression:
     // 3种终结符
     NUMBER {
-        printf("mov eax, %d\n", $1);
+        printf("mov eax, %d\npush eax\n", $1);
     }
     | function_call {
+        // printf("push eax\n");
     }
     | IDENTIFIER {
-        printf("push DWORD PTR[ebp%+d]\n", var_address($1, analysised_func));
+        // 在函数名和变量名不重复的前提下，可以做到这一点，利用当前名称是否出现在函数名中判断是否是函数
+        printf("mov eax, DWORD PTR[ebp%+d]\npush eax\n", var_address($1, analysised_func));
     }
     // 3种单目运算符
     | MINUS expression %prec NOT {
-        printf("neg eax\npush eax\n");
+        // printf("neg eax\npush eax\n");
+        printf("pop eax\nneg eax\npush eax\n");
     }
     | NOT expression {
-        printf("test eax, eax\nsetz al\nmovzx eax, al\npush eax\n");
+        printf("pop eax\ntest eax, eax\nsetz al\nmovzx eax, al\npush eax\n");
     }
     | BIT_NOT expression {
-        printf("not eax\ncmp eax, 0\nsete al\nand eax, 1\npush eax\n");
+        printf("pop eax\nnot eax\ncmp eax, 0\nsete al\nand eax, 1\npush eax\n");
     }
     // 双目运算符
     | expression PLUS expression {
