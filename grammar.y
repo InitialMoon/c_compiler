@@ -32,6 +32,7 @@ struct function_struct {
     int var_num;
     int var_stack_address;
     char* func_name;
+    int have_return;
 };
 
 struct function_struct funcs[100];
@@ -141,7 +142,7 @@ function_defination:
     ;
 
 function_name:
-    return_type IDENTIFIER {
+    INT IDENTIFIER {
         printf("\n.global %s\n", $2);
         printf("%s:\n", $2);
         printf("push ebp\n");
@@ -153,6 +154,23 @@ function_name:
         nf.param_stack_address = 4;
         nf.var_num = 0;
         nf.var_stack_address = 0;
+        nf.have_return = 1;
+        funcs[function_num] = nf;
+        analysised_func = &funcs[function_num];
+    }
+    | VOID IDENTIFIER {
+        printf("\n.global %s\n", $2);
+        printf("%s:\n", $2);
+        printf("push ebp\n");
+        printf("mov ebp, esp\n");
+        printf("sub esp, 0x100\n");
+        struct function_struct nf;
+        nf.func_name = strdup($2);
+        nf.param_num = 0;
+        nf.param_stack_address = 4;
+        nf.var_num = 0;
+        nf.var_stack_address = 0;
+        nf.have_return = 0;
         funcs[function_num] = nf;
         analysised_func = &funcs[function_num];
     }
@@ -168,16 +186,12 @@ function_call:
                 for (int i = 0; i < called_func->param_num; i++) {
                     printf("add esp, 4\n");
                 }
+                if (called_func->have_return) {
+                    printf("push eax\n");
+                }
             }
         }
-        printf("push eax\n");
     }
-    ;
-
-// 类型标识定义
-return_type:
-    INT { }
-    | VOID { }
     ;
 
 // 形参定义
@@ -287,6 +301,10 @@ expression:
         printf("mov eax, DWORD PTR[ebp%+d]\npush eax\n", var_address($1, analysised_func));
     }
     // 3种单目运算符
+    |
+    MINUS expression %prec NOT { 
+        printf("pop eax\nneg eax\npush eax\n");
+    } // unary minus
     | NOT expression {
         printf("pop eax\ntest eax, eax\nsetz al\nmovzx eax, al\npush eax\n");
     }
@@ -358,10 +376,6 @@ expression:
         printf("pop ebx\npop eax\n");
         printf("xor eax, ebx\npush eax\n");
     }
-    |
-    MINUS expression %prec NOT { 
-        printf("pop eax\nneg eax\npush eax\n");
-    } // unary minus
     // 括号
     | LPAREN expression RPAREN {
     }
