@@ -92,7 +92,6 @@ struct function_struct* called_func;
 %token <ival> NUMBER
 
 %right ASSIGN
-
 %left OR // ||
 %left AND // &&
 %left BIT_OR // |
@@ -103,7 +102,7 @@ struct function_struct* called_func;
 %left PLUS MINUS // + -
 %left MUL DIV MOD // * / %
 
-%right BIT_NOT NOT 
+%left BIT_NOT NOT
 
 %start translation_unit
 
@@ -147,7 +146,7 @@ function_name:
         printf("%s:\n", $2);
         printf("push ebp\n");
         printf("mov ebp, esp\n");
-        printf("sub esp, 0x100\n");
+        printf("sub esp, 100\n");
         struct function_struct nf;
         nf.func_name = strdup($2);
         nf.param_num = 0;
@@ -163,7 +162,7 @@ function_name:
         printf("%s:\n", $2);
         printf("push ebp\n");
         printf("mov ebp, esp\n");
-        printf("sub esp, 0x100\n");
+        printf("sub esp, 100\n");
         struct function_struct nf;
         nf.func_name = strdup($2);
         nf.param_num = 0;
@@ -231,9 +230,9 @@ statements:
 statement:
     RETURN expression SEMICOLON {
     }
-    | CONTINUE SEMICOLON {
+    | ContinueStmt {
     }
-    | BREAK SEMICOLON {
+    | BreakStmt {
     }
     | assign  SEMICOLON {
     }
@@ -242,32 +241,59 @@ statement:
     | function_call SEMICOLON
     | if_statement {
     }
-    | if_else_statement {
-    }
     | while_statement {
     }
     ;
 
+BreakStmt:
+    BREAK SEMICOLON     { printf("\tjmp _endWhile_%d\n", _w); }
+;
+
+ContinueStmt:
+    CONTINUE SEMICOLON  { printf("\tjmp _begWhile_%d\n", _w); }
+;
+
 // if_else语句定义
 if_statement:
-    IF LPAREN expression RPAREN LBRACE statement RBRACE {
+    T_IF LPAREN expression RPAREN Then LBRACE statement RBRACE EndThen EndIf {
     }
-    ;
-else_statement:
-    ELSE LBRACE statement RBRACE {
+    |
+    T_IF LPAREN expression RPAREN Then LBRACE statement RBRACE EndThen ELSE LBRACE statement RBRACE EndIf {
     }
     ;
 
-if_else_statement:
-    if_statement else_statement {
+T_IF:
+    IF {
+        _BEG_IF; printf("_begIf_%d:\n", _i);
     }
-    ;
+
+Then:
+    /* empty */     { printf("\tjz _elIf_%d\n", _i); }
+;
+
+EndThen:
+    /* empty */     { printf("\tjmp _endIf_%d\n_elIf_%d:\n", _i, _i); }
+;
+
+EndIf:
+    /* empty */     { printf("_endIf_%d:\n\n", _i); _END_IF; }
+;
 
 // while语句定义
 while_statement:
-    WHILE LPAREN expression RPAREN LBRACE statement RBRACE {
+    While LPAREN expression RPAREN LBRACE statement RBRACE EndWhile {
     }
     ;
+
+While:
+    WHILE         { _BEG_WHILE; printf("_begWhile_%d:\n", _w); }
+    ;
+
+EndWhile:
+    /* empty */     { printf("\tjmp _begWhile_%d\n_endWhile_%d:\n\n", 
+                                _w, _w); _END_WHILE; }
+    ;
+
 
 // 变量赋值
 assign:
@@ -330,7 +356,7 @@ expression:
     }
     | expression MOD expression {
         printf("pop ebx\npop eax\n");
-        printf("cdq\nidiv ebx\npush eax\n");
+        printf("cdq\nidiv ebx\nmov eax, edx\npush eax\n");
     }
     | expression LT expression {
         printf("pop ebx\npop eax\n");
@@ -358,12 +384,18 @@ expression:
     }
     | expression AND expression {
         printf("pop ebx\npop eax\n");
+        printf("cmp eax, 0\nsetne al\n");
+        printf("movzx eax, al\ncmp ebx, 0\n");
+        printf("setne bl\nmovzx ebx, bl\n");
         printf("and eax, ebx\npush eax\n");
     }
     | expression OR expression {
         printf("pop ebx\npop eax\n");
-        printf("or eax, ebx\npush eax\n");
+        printf("test eax, eax\n");
+        printf("setne al\ncbw\n cwde\ntest ebx, ebx\n");
+        printf("setne bl\nor al, bl\npush eax\n");
     }
+
     | expression BIT_AND expression {
         printf("pop ebx\npop eax\n");
         printf("and eax, ebx\npush eax\n");
@@ -390,7 +422,7 @@ void yyerror(const char *s) {
 
 int main(int argc, char **argv) {
     if (argc != 2) {
-        fprintf(stderr, "Usage: %s <input-file>\n", argv[0]);
+        // fprintf(stderr, "Usage: %s <input-file>\n", argv[0]);
         return 1;
     }
 
