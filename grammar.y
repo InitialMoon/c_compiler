@@ -127,6 +127,15 @@ translation_unit:
         printf("add esp, 8\n");
         printf("leave\n");
         printf("ret\n");
+        struct function_struct nf;
+        nf.func_name = strdup("println_int");
+        nf.param_num = 1;
+        nf.param_stack_address = 4;
+        nf.var_num = 0;
+        nf.var_stack_address = 0;
+        nf.have_return = 0;
+        funcs[function_num] = nf;
+        function_num++;
     }
     | translation_unit function_defination
     ;
