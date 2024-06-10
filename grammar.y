@@ -86,7 +86,7 @@ struct function_struct* called_func;
 }
 
 %token <identifier> VOID INT
-%token RETURN IF ELSE WHILE CONTINUE BREAK
+%token CONTINUE BREAK RETURN IF ELSE WHILE 
 %token SEMICOLON COMMA LPAREN RPAREN LBRACE RBRACE 
 %token <identifier> IDENTIFIER
 %token <ival> NUMBER
@@ -233,13 +233,13 @@ statements:
 
 statement:
     RETURN expression SEMICOLON
-    | ContinueStmt
-    | BreakStmt 
     | assign  SEMICOLON
     | declaration SEMICOLON 
     | function_call SEMICOLON
     | if_statement
     | while_statement
+    | ContinueStmt SEMICOLON
+    | BreakStmt SEMICOLON
     ;
 
 TestExpr:
@@ -252,8 +252,8 @@ StmtsBlock:
 
 // if_else语句定义
 if_statement:
-    T_IF LPAREN expression RPAREN Then LBRACE statement RBRACE EndThen EndIf
-    | T_IF LPAREN expression RPAREN Then LBRACE statement RBRACE EndThen ELSE LBRACE statement RBRACE EndIf
+    T_IF LPAREN expression RPAREN Then LBRACE statements RBRACE EndThen EndIf
+    | T_IF LPAREN expression RPAREN Then LBRACE statements RBRACE EndThen ELSE LBRACE statement RBRACE EndIf
     ;
 
 T_IF:
@@ -263,15 +263,15 @@ T_IF:
 
 Then:
     /* empty */     { printf("pop eax\ncmp eax, 0\nje ._elIf_%d\n", _i); }
-;
+    ;
 
 EndThen:
     /* empty */     { printf("jmp ._endIf_%d\n._elIf_%d:\n", _i, _i); }
-;
+    ;
 
 EndIf:
     /* empty */     { printf("._endIf_%d:\n\n", _i); _END_IF; }
-;
+    ;
 
 // while语句定义
 while_statement:
@@ -291,12 +291,11 @@ EndWhile:
     ;
 
 BreakStmt:
-    BREAK SEMICOLON     { printf("jmp ._endWhile_%d\n", _w); }
-;
-
+    BREAK { printf("jmp ._endWhile_%d\n", _w); }
+    ;
 ContinueStmt:
-    CONTINUE SEMICOLON  { printf("jmp ._begWhile_%d\n", _w); }
-;
+    CONTINUE { printf("jmp ._begWhile_%d\n", _w); }
+    ;
 
 // 变量赋值
 assign:
