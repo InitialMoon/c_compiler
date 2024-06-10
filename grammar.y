@@ -135,7 +135,6 @@ function_defination:
     function_name LPAREN params RPAREN LBRACE statements RBRACE {
         printf("leave\n");
         printf("ret\n");
-        function_num++;
     }
     ;
 
@@ -155,6 +154,7 @@ function_name:
         nf.have_return = 1;
         funcs[function_num] = nf;
         analysised_func = &funcs[function_num];
+        function_num++;
     }
     | VOID IDENTIFIER {
         printf("\n.global %s\n", $2);
@@ -171,6 +171,7 @@ function_name:
         nf.have_return = 0;
         funcs[function_num] = nf;
         analysised_func = &funcs[function_num];
+        function_num++;
     }
     ;
 
@@ -233,11 +234,11 @@ statement:
     ;
 
 BreakStmt:
-    BREAK SEMICOLON     { printf("\tjmp _endWhile_%d\n", _w); }
+    BREAK SEMICOLON     { printf("jmp ._endWhile_%d\n", _w); }
 ;
 
 ContinueStmt:
-    CONTINUE SEMICOLON  { printf("\tjmp _begWhile_%d\n", _w); }
+    CONTINUE SEMICOLON  { printf("jmp ._begWhile_%d\n", _w); }
 ;
 
 // if_else语句定义
@@ -251,33 +252,37 @@ if_statement:
 
 T_IF:
     IF {
-        _BEG_IF; printf("_begIf_%d:\n", _i);
+        _BEG_IF; printf("._begIf_%d:\n", _i);
     }
 
 Then:
-    /* empty */     { printf("\tjz _elIf_%d\n", _i); }
+    /* empty */     { printf("pop eax\ncmp eax, 0\nje ._elIf_%d\n", _i); }
 ;
 
 EndThen:
-    /* empty */     { printf("\tjmp _endIf_%d\n_elIf_%d:\n", _i, _i); }
+    /* empty */     { printf("jmp ._endIf_%d\n._elIf_%d:\n", _i, _i); }
 ;
 
 EndIf:
-    /* empty */     { printf("_endIf_%d:\n\n", _i); _END_IF; }
+    /* empty */     { printf("._endIf_%d:\n\n", _i); _END_IF; }
 ;
 
 // while语句定义
 while_statement:
-    While LPAREN expression RPAREN LBRACE statement RBRACE EndWhile {
+    While LPAREN expression RPAREN Do LBRACE statement RBRACE EndWhile {
     }
     ;
 
 While:
-    WHILE         { _BEG_WHILE; printf("_begWhile_%d:\n", _w); }
+    WHILE         { _BEG_WHILE; printf("._begWhile_%d:\n", _w); }
     ;
 
+Do:
+    /* empty */     { printf("pop eax\ncmp eax, 0\nje ._endWhile_%d\n", _w); }
+;
+
 EndWhile:
-    /* empty */     { printf("\tjmp _begWhile_%d\n_endWhile_%d:\n\n", 
+    /* empty */     { printf("jmp ._begWhile_%d\n._endWhile_%d:\n\n", 
                                 _w, _w); _END_WHILE; }
     ;
 
