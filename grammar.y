@@ -233,21 +233,18 @@ statement:
     | while_statement
     ;
 
-BreakStmt:
-    BREAK SEMICOLON     { printf("jmp ._endWhile_%d\n", _w); }
-;
+TestExpr:
+    LPAREN expression RPAREN
+    ;
 
-ContinueStmt:
-    CONTINUE SEMICOLON  { printf("jmp ._begWhile_%d\n", _w); }
-;
+StmtsBlock:
+    LBRACE statements RBRACE
+    ;
 
 // if_else语句定义
 if_statement:
-    T_IF LPAREN expression RPAREN Then LBRACE statement RBRACE EndThen EndIf {
-    }
-    |
-    T_IF LPAREN expression RPAREN Then LBRACE statement RBRACE EndThen ELSE LBRACE statement RBRACE EndIf {
-    }
+    T_IF LPAREN expression RPAREN Then LBRACE statement RBRACE EndThen EndIf
+    | T_IF LPAREN expression RPAREN Then LBRACE statement RBRACE EndThen ELSE LBRACE statement RBRACE EndIf
     ;
 
 T_IF:
@@ -269,8 +266,7 @@ EndIf:
 
 // while语句定义
 while_statement:
-    While LPAREN expression RPAREN Do LBRACE statement RBRACE EndWhile {
-    }
+    While TestExpr Do StmtsBlock EndWhile
     ;
 
 While:
@@ -279,13 +275,19 @@ While:
 
 Do:
     /* empty */     { printf("pop eax\ncmp eax, 0\nje ._endWhile_%d\n", _w); }
-;
-
-EndWhile:
-    /* empty */     { printf("jmp ._begWhile_%d\n._endWhile_%d:\n\n", 
-                                _w, _w); _END_WHILE; }
     ;
 
+EndWhile:
+    /* empty */     { printf("jmp ._begWhile_%d\n._endWhile_%d:\n\n", _w, _w); _END_WHILE; }
+    ;
+
+BreakStmt:
+    BREAK SEMICOLON     { printf("jmp ._endWhile_%d\n", _w); }
+;
+
+ContinueStmt:
+    CONTINUE SEMICOLON  { printf("jmp ._begWhile_%d\n", _w); }
+;
 
 // 变量赋值
 assign:
