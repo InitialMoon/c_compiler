@@ -1,4 +1,5 @@
 #!/usr/bin/env fish
+# 复制到build文件夹执行
 
 # Loop through e01.c to e08.c
 for i in (seq -w 1 8)
