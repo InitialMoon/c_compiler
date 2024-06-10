@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10) 
-project(lab03) 
+project(lab04) 
 set(CMAKE_CXX_STANDARD 14)
 
 include(FindFLEX) 
@@ -37,11 +37,11 @@ ADD_FLEX_BISON_DEPENDENCY(MyLexer MyParser)
 add_compile_options(-pedantic) 
 
 add_executable(
-    Compilerlab3 
+    Compilerlab4 
     ${FLEX_MyLexer_OUTPUTS}
     ${BISON_MyParser_OUTPUTS}
 )
-target_compile_features(Compilerlab3 PRIVATE cxx_std_14)
+target_compile_features(Compilerlab4 PRIVATE cxx_std_14)
 
 # Ensure project rebuilds when debugging
-set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT Compilerlab3)
+set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT Compilerlab4)

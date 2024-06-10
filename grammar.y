@@ -128,8 +128,7 @@ translation_unit:
         printf("leave\n");
         printf("ret\n");
     }
-    | translation_unit function_defination {
-    }
+    | translation_unit function_defination
     ;
 
 function_defination:
@@ -195,8 +194,7 @@ function_call:
 
 // 形参定义
 params:
-    /* empty */ {
-    }
+    /* empty */
     | INT IDENTIFIER { // 带类型的函数参数说明这里是在定义阶段
         param_address($2, analysised_func);
     }
@@ -209,40 +207,29 @@ params:
 // 实参形式定义
 arguments:
     /* empty */
-    | argument_list {
-    }
+    | argument_list
     ;
 
 argument_list:
-    expression {
-    }
-    | argument_list COMMA expression {
-    }
+    expression
+    | argument_list COMMA expression
     ;
 
 // 语句定义
 statements:
-    /* empty */ {  }
-    | statements statement {
-    }
+    /* empty */
+    | statements statement
     ;
 
 statement:
-    RETURN expression SEMICOLON {
-    }
-    | ContinueStmt {
-    }
-    | BreakStmt {
-    }
-    | assign  SEMICOLON {
-    }
-    | declaration SEMICOLON {
-    }
+    RETURN expression SEMICOLON
+    | ContinueStmt
+    | BreakStmt 
+    | assign  SEMICOLON
+    | declaration SEMICOLON 
     | function_call SEMICOLON
-    | if_statement {
-    }
-    | while_statement {
-    }
+    | if_statement
+    | while_statement
     ;
 
 BreakStmt:
@@ -320,8 +307,7 @@ expression:
     NUMBER {
         printf("mov eax, %d\npush eax\n", $1);
     }
-    | function_call {
-    }
+    | function_call
     | IDENTIFIER {
         // 在函数名和变量名不重复的前提下，可以做到这一点，利用当前名称是否出现在函数名中判断是否是函数
         printf("mov eax, DWORD PTR[ebp%+d]\npush eax\n", var_address($1, analysised_func));
@@ -395,7 +381,6 @@ expression:
         printf("setne al\ncbw\n cwde\ntest ebx, ebx\n");
         printf("setne bl\nor al, bl\npush eax\n");
     }
-
     | expression BIT_AND expression {
         printf("pop ebx\npop eax\n");
         printf("and eax, ebx\npush eax\n");
@@ -409,8 +394,7 @@ expression:
         printf("xor eax, ebx\npush eax\n");
     }
     // 括号
-    | LPAREN expression RPAREN {
-    }
+    | LPAREN expression RPAREN
     ;
 
 %%
